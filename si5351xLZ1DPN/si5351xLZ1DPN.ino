@@ -84,7 +84,7 @@ unsigned long cwTimeout = 0;     //keyer var - dead operator control
 #define TX_ON (7)   // this is for microphone PTT in SSB transceivers (not need for cw trx)
 #define CW_KEY (4)   // KEY output pin - in Q7 transistor colector (+5V when keyer down for RF signal modulation) (in Minima to enable sidetone generator on)
 #define BAND_HI (6)  // relay for RF output 2 pcs LPF  - (0) < 15 MHz , (1) > 15 MHz (see schematic)  
-//#define USB (5)
+#define USB (8)
 //#define FBUTTON (A3)  // button - stopped
 #define ANALOG_KEYER (A1)  // KEYER input - for analog straight key
 char inTx = 0;     // trx in transmit mode temp var
@@ -319,15 +319,7 @@ digitalWrite(CW_KEY, LOW);
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-        if (var_start == 1) {
-            var_start=0;
-            digitalWrite(TX_RX, 0);
-            digitalWrite(CW_KEY, 1);
-            digitalWrite(CW_KEY, 0);
-            digitalWrite(TX_RX, 1);
-            delay(50);
-        }
-            
+
 	checkCW();   // when pres keyer
 //	checkTX();   // microphone PTT
 	checkBTNdecode();  // BAND change
