@@ -90,6 +90,7 @@ unsigned long cwTimeout = 0;     //keyer var - dead operator control
 char inTx = 0;     // trx in transmit mode temp var
 char keyDown = 0;   // keyer down temp vat
 //int var_start = 1;
+int var_i = 0;
 
 //AD9851 control - stopped
 //#define W_CLK 8   // Pin 8 - connect to AD9851 module word load clock pin (CLK)
@@ -132,16 +133,6 @@ int BTNlaststate = 0;
 int BTNcheck = 0;
 int BTNcheck2 = 0;
 int BTNinc = 3; // set number of default band minus 1 ---> (for 7MHz = 3)
-
-ISR(PCINT2_vect) {
-  unsigned char result = r.process();
-  if (result) {    
-    if (result == DIR_CW){rx=rx+increment;}
-    else {rx=rx-increment;};       
-      if (rx >=160000000){rx=rx2;}; // UPPER VFO LIMIT 
-      if (rx <=100000){rx=rx2;}; // LOWER VFO LIMIT
-  }
-}
 
 void checkTX(){   // this is stopped now, but if you need to use mike for SSB PTT button, start in main loop function - not fully tested after last changes
   //we don't check for ptt when transmitting cw
@@ -210,8 +201,9 @@ void setup() {
 Wire.begin();
  
 // Start serial and initialize the Si5351
- Serial.begin(19200);
+ Serial.begin(115200);
 
+// rotary
   PCICR |= (1 << PCIE2);
   PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
   sei();
@@ -345,7 +337,7 @@ void loop() {
 		BTNcheck = 0;   
 		if (BTNcheck == 0) {
 			showFreq();
-      display.clearDisplay();	
+			display.clearDisplay();	
 			display.setCursor(0,0);
 			display.println(rx);
 			display.setCursor(0,18);
@@ -372,25 +364,25 @@ void loop() {
 // LPF band switch relay	  
 	  
 	if(rx <= 14999999){
-		digitalWrite(BAND_HI, 0);
+		  digitalWrite(BAND_HI, 0);
 	    }
 	if(rx > 14999999){
-		digitalWrite(BAND_HI, 1);
-		}
+		  digitalWrite(BAND_HI, 1);
+		  }
 		
 	if(rx < 10000000){
-		rxif=rxifLSB;
-                digitalWrite(USB, 0);
+		  rxif=rxifLSB;
+      digitalWrite(USB, 0);
 	    }
 	if(rx >= 10000000){
-		rxif=rxifUSB;
-                digitalWrite(USB, 1);
-		}
+		  rxif=rxifUSB;
+      digitalWrite(USB, 1);
+	  	}
 		
 		  
 ///	  SERIAL COMMUNICATION - remote computer control for DDS - worked but not finishet yet - 1, 2, 3, 4 - worked 
    /*  check if data has been sent from the computer: */
-  if (Serial.available()) {
+if (Serial.available()) {
     /* read the most recent byte */
     byteRead = Serial.read();
 	if(byteRead == 49){     // 1 - up freq
@@ -412,22 +404,42 @@ void loop() {
 		Serial.println(increment);
 		Serial.println(hertz);
 		}
-  if(byteRead == 53){		// 5 - scan freq from 7000 to 7050 and back to 7000
-             for (int i=0; i=500; (i=i+100)){
-                rx = rx + i;
+  if(byteRead == 53){		// 5 - scan freq from 7000 to 7050 and back to 7000  
+             var_i=0;           
+             while(var_i<=4000){
+                var_i++;
+                rx = rx + 10;
                 sendFrequency(rx);
                 Serial.println(rx);
                 showFreq();
-                display.clearDisplay();	
-				        display.setCursor(0,0);
-				        display.println(rx);
-				        display.setCursor(0,18);
-				        display.println(hertz);
-				        display.display();
-                delay(250);
-             }
-       }
-	}
+                if (Serial.available()) {
+					          if(byteRead == 53){
+						            break;						           
+					          }
+				        }
+                //delay(50);
+             }        
+   }
+
+   if(byteRead == 54){   // 6 - scan freq back 40kHz  
+             var_i=0;           
+             while(var_i<=4000){
+                var_i++;
+                rx = rx - 10;
+                sendFrequency(rx);
+                Serial.println(rx);
+                showFreq();
+                if (Serial.available()) {
+                    if(byteRead == 53){
+                        break;                       
+                    }
+                }
+                //delay(50);
+             }        
+   }
+   
+}
+	
 }	  
 /// END of main loop ///
 /// ===================================================== END ============================================
@@ -435,7 +447,7 @@ void loop() {
 
 /// START EXTERNAL FUNCTIONS
 
-/*
+
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
   if (result) {    
@@ -445,7 +457,6 @@ ISR(PCINT2_vect) {
       if (rx <=100000){rx=rx2;}; // LOWER VFO LIMIT
   }
 }
-*/
 
 // new
 void sendFrequency(double frequency) { 

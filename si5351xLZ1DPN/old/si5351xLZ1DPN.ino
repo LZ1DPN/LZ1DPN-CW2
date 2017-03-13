@@ -133,6 +133,18 @@ int BTNcheck = 0;
 int BTNcheck2 = 0;
 int BTNinc = 3; // set number of default band minus 1 ---> (for 7MHz = 3)
 
+/*
+ISR(PCINT2_vect) {
+  unsigned char result = r.process();
+  if (result) {    
+    if (result == DIR_CW){rx=rx+increment;}
+    else {rx=rx-increment;};       
+      if (rx >=160000000){rx=rx2;}; // UPPER VFO LIMIT 
+      if (rx <=100000){rx=rx2;}; // LOWER VFO LIMIT
+  }
+}
+*/
+
 void checkTX(){   // this is stopped now, but if you need to use mike for SSB PTT button, start in main loop function - not fully tested after last changes
   //we don't check for ptt when transmitting cw
   if (cwTimeout > 0)
@@ -200,7 +212,13 @@ void setup() {
 Wire.begin();
  
 // Start serial and initialize the Si5351
- Serial.begin(19200);
+ Serial.begin(115200);
+
+// rotary
+  PCICR |= (1 << PCIE2);
+  PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
+  sei();
+  
 // new
  
   si5351.set_correction(140); //**mine. There is a calibration sketch in File/Examples/si5351Arduino-Jason
@@ -258,7 +276,7 @@ digitalWrite(CW_KEY, LOW);
 
 // Initialize the Serial port so that we can use it for debugging
 //  Serial.begin(115200);
-  Serial.println("Start VFO ver 8.0 minima 3");
+  Serial.println("Start VFO ver 10.0 cw 2.0");
 
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
@@ -307,12 +325,12 @@ digitalWrite(CW_KEY, LOW);
    // Load the stored frequency  
   if (ForceFreq == 0) {
     freq = String(EEPROM.read(0))+String(EEPROM.read(1))+String(EEPROM.read(2))+String(EEPROM.read(3))+String(EEPROM.read(4))+String(EEPROM.read(5))+String(EEPROM.read(6));
-    rx = freq.toInt();  
-  }
+    rx = freq.toInt();
+    }
   
  for (int index = 0; index < colums; index++){
     line1[index] = 32;
-	line2[index] = 32;
+	  line2[index] = 32;
  }
 }
 
@@ -330,7 +348,7 @@ void loop() {
 		BTNcheck = 0;   
 		if (BTNcheck == 0) {
 			showFreq();
-            display.clearDisplay();	
+      display.clearDisplay();	
 			display.setCursor(0,0);
 			display.println(rx);
 			display.setCursor(0,18);
@@ -391,26 +409,27 @@ void loop() {
     Serial.println(increment);
 		}
 	if(byteRead == 52){		// 4 - print VFO state in serial console
-		Serial.println("VFO_VERSION 8.0");
+		Serial.println("VFO_VERSION 10.0");
 		Serial.println(rx);
 		Serial.println(rxif);
 		Serial.println(increment);
 		Serial.println(hertz);
 		}
-        if(byteRead == 53){		// 5 - scan freq from 7000 to 7050 and back to 7000
-             for (int i=0; i=500; (i=i+100))
+  if(byteRead == 53){		// 5 - scan freq from 7000 to 7050 and back to 7000
+             for (int i=0; i=500; (i=i+100)){
                 rx = rx + i;
                 sendFrequency(rx);
                 Serial.println(rx);
                 showFreq();
                 display.clearDisplay();	
-				display.setCursor(0,0);
-				display.println(rx);
-				display.setCursor(0,18);
-				display.println(hertz);
-				display.display();
+				        display.setCursor(0,0);
+				        display.println(rx);
+				        display.setCursor(0,18);
+				        display.println(hertz);
+				        display.display();
                 delay(250);
-                }
+             }
+       }
 	}
 }	  
 /// END of main loop ///
@@ -418,6 +437,7 @@ void loop() {
 
 
 /// START EXTERNAL FUNCTIONS
+
 
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
