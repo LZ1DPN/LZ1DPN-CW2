@@ -430,7 +430,7 @@ if (Serial.available()) {
                 Serial.println(rx);
                 showFreq();
                 if (Serial.available()) {
-                    if(byteRead == 53){
+                    if(byteRead == 54){
                         break;                       
                     }
                 }
