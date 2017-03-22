@@ -108,6 +108,8 @@ int_fast32_t rx2=1; // temp variable to hold the updated frequency
 int_fast32_t rxif=19996500; // IF freq, will be summed with vfo freq - rx variable
 int_fast32_t rxifLSB=19996500;  //
 int_fast32_t rxifUSB=20002500;   // in cw trx not need
+int_fast32_t rxRIT=0;
+int_fast32_t rx600hz=600;   // in cw trx not need
 String tbfo = "";
 
 int_fast32_t increment = 100; // starting VFO update increment in HZ. tuning step
@@ -221,11 +223,14 @@ Wire.begin();
   // Set CLK0 to output the starting "vfo" frequency as set above by vfo = ?
 
 #ifdef IF_Offset
+  // Set CLK0 to output vfo + if = rx vfo frequency	
   si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
   volatile uint32_t vfoT = (rx * SI5351_FREQ_MULT) + rxif;
   tbfo = "LSB";
+  // Set CLK1 to output tx vfo frequency
+  si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
   // Set CLK2 to output bfo frequency
-  si5351.set_freq( rxif, 0, SI5351_CLK2);
+  si5351.set_freq(rxif, 0, SI5351_CLK2);
   //si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA); //you can set this to 2MA, 4MA, 6MA or 8MA
   //si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_2MA); //be careful though - measure into 50ohms
   //si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_2MA); //
@@ -464,6 +469,10 @@ void sendFrequency(double frequency) {
     si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
     //you can also subtract the bfo to suit your needs
     //si5351.set_freq((rx * SI5351_FREQ_MULT) - rxif  , SI5351_PLL_FIXED, SI5351_CLK0);
+	// Set CLK1 to output tx vfo frequency
+    si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
+    
+	// Set CLK2 to output bfo frequency
 
     if (rx >= 10000000ULL & tbfo != "USB")
     {
