@@ -66,9 +66,11 @@ int byteRead = 0;  // for serial comunication
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
   
-int_fast32_t rx=7000000/SI5351_FREQ_MULT; // Starting frequency of VFO
+//int_fast32_t rx=7000000/SI5351_FREQ_MULT; // Starting frequency of VFO
+int_fast32_t rx=7000000;
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
 int_fast32_t rxif=6000000; // IF freq, will be summed with vfo freq - rx variable
+int_fast32_t rxBFO=5998500;
 int_fast32_t rxRIT=0;
 int_fast32_t rx600hz=600;   // in cw trx not need
 
@@ -154,14 +156,16 @@ Wire.begin();
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   // Set CLK0 to output the starting "vfo" frequency as set above by vfo = ?
   // Set CLK0 to output vfo + if = rx vfo frequency	
-  si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
-  volatile uint32_t vfoT = (rx * SI5351_FREQ_MULT) + rxif;
+//  si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
+   si5351.set_freq((rx + rxif), SI5351_PLL_FIXED, SI5351_CLK0);
+  volatile uint32_t vfoT = rx + rxif;
 
   // Set CLK1 to output tx vfo frequency
-  si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
+//  si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
+    si5351.set_freq((rx + rx600hz), SI5351_PLL_FIXED, SI5351_CLK1);
 
   // Set CLK2 to output bfo frequency
-  si5351.set_freq(rxif, 0, SI5351_CLK2);
+  si5351.set_freq(rxBFO, 0, SI5351_CLK2);
   si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA); //you can set this to 2MA, 4MA, 6MA or 8MA
   si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_8MA); //be careful though - measure into 50ohms
   si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_8MA); //
@@ -259,12 +263,14 @@ if (Serial.available()) {
     /* read the most recent byte */
     byteRead = Serial.read();
 	if(byteRead == 49){     // 1 - up freq
-		rx = rx + increment;
-    Serial.println(rx);
+		rxBFO = rxBFO + increment;
+		sendFrequency(rx);
+    Serial.println(rxBFO);
 		}
 	if(byteRead == 50){		// 2 - down freq
-		rx = rx - increment;
-    Serial.println(rx);
+		rxBFO = rxBFO - increment;
+		sendFrequency(rx);
+    Serial.println(rxBFO);
 		}
 	if(byteRead == 51){		// 3 - up increment
 		setincrement();
@@ -274,6 +280,7 @@ if (Serial.available()) {
 		Serial.println("VFO_VERSION 10.0");
 		Serial.println(rx);
 		Serial.println(rxif);
+		Serial.println(rxBFO);
 		Serial.println(increment);
 		Serial.println(hertz);
 		}
@@ -339,7 +346,7 @@ void sendFrequency(double frequency) {
     si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
     
 	//BFO Set CLK2 to output bfo frequency
-    si5351.set_freq(rxif, 0, SI5351_CLK2);
+    si5351.set_freq(rxBFO, 0, SI5351_CLK2);
 
 	Serial.println(frequency);   // for serial console debuging
 }
