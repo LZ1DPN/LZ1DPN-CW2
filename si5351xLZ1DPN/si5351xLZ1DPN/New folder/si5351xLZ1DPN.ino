@@ -68,8 +68,8 @@ Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be inter
   
 int_fast32_t rx=7000000; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxif=5999950; // IF freq, will be summed with vfo freq - rx variable 6000000  5999600
-int_fast32_t rxbfo=5999950;  //BFO generator5999800 5999200
+int_fast32_t rxif=5999700; // IF freq, will be summed with vfo freq - rx variable
+int_fast32_t rxbfo=5999000;  //BFO generator
 int_fast32_t rxRIT=0;
 int_fast32_t rx600hz=0;   // in cw trx not need cw offset
 long cal=1;
@@ -155,7 +155,7 @@ Wire.begin();
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
   Serial.println("*Fix PLL\n");
-  si5351.output_enable(SI5351_CLK0, 0);
+  si5351.output_enable(SI5351_CLK0, 1);
   si5351.output_enable(SI5351_CLK1, 1);
   si5351.output_enable(SI5351_CLK2, 1);
  
@@ -164,15 +164,15 @@ Wire.begin();
   // Set CLK0 to output vfo + if = rx vfo frequency	
   si5351.set_freq(1300000000L , SI5351_CLK1);
   // Set CLK1 to output tx vfo frequency
-//  si5351.set_freq((700000000L + rx600hz), SI5351_CLK0);
+  si5351.set_freq((700000000L + rx600hz), SI5351_CLK0);
   // Set CLK2 to output bfo frequency
   si5351.set_freq(600000000L , SI5351_CLK2);
   Serial.println("*Si5350 ON\n");
 
   // Set CLK levels
   si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA); //you can set this to 2MA, 4MA, 6MA or 8MA
-  si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_2MA); //be careful though - measure into 50ohms
-  si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_2MA); //
+  si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_4MA); //be careful though - measure into 50ohms
+  si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_4MA); //
 // new
   
 //set up the pins in/out and logic levels
@@ -266,14 +266,14 @@ if (Serial.available()) {
     /* read the most recent byte */
     byteRead = Serial.read();
 	if(byteRead == 49){     // 1 - up freq
-		rx = rx + increment;
+		rxBFO = rxBFO + increment;
 		sendFrequency(rx);
-    Serial.println(rx);
+    Serial.println(rxBFO);
 		}
 	if(byteRead == 50){		// 2 - down freq
-		rx = rx - increment;
+		rxBFO = rxBFO - increment;
 		sendFrequency(rx);
-    Serial.println(rx);
+    Serial.println(rxBFO);
 		}
 	if(byteRead == 51){		// 3 - up increment
 		setincrement();
@@ -283,7 +283,7 @@ if (Serial.available()) {
 		Serial.println("VFO_VERSION 10.0");
 		Serial.println(rx);
 		Serial.println(rxif);
-		Serial.println(rxbfo);
+		Serial.println(rxBFO);
 		Serial.println(increment);
 		Serial.println(hertz);
 		}
@@ -320,13 +320,11 @@ if (Serial.available()) {
    }
    if(byteRead == 55){     // 1 - up freq
     rxbfo = rxbfo + increment;
-//    rxif = rxbfo;
     sendFrequency(rx);
     Serial.println(rxbfo);
    }
   if(byteRead == 56){   // 2 - down freq
     rxbfo = rxbfo - increment;
-//    rxif = rxbfo;
     sendFrequency(rx);
     Serial.println(rxbfo);
   }
@@ -345,8 +343,8 @@ ISR(PCINT2_vect) {
   if (result) {    
     if (result == DIR_CW){rx=rx+increment;}
     else {rx=rx-increment;};       
-//      if (rx >=12000000000){rx=rx2;}; // UPPER VFO LIMIT 
-//      if (rx <=100000){rx=rx2;}; // LOWER VFO LIMIT
+      if (rx >=120000000){rx=rx2;}; // UPPER VFO LIMIT 
+      if (rx <=100000){rx=rx2;}; // LOWER VFO LIMIT
   }
 }
 
@@ -356,7 +354,7 @@ void sendFrequency(double frequency) {
   //VFO
 	si5351.set_freq(((rx + rxif)*100LL), SI5351_CLK1);
 	//TXVFO Set CLK1 to output tx vfo frequency
-//  si5351.set_freq(((rx + rx600hz)*100LL), SI5351_CLK0);
+  si5351.set_freq(((rx + rx600hz)*100LL), SI5351_CLK0);
 	//BFO Set CLK2 to output bfo frequency
   si5351.set_freq((rxbfo*100LL), SI5351_CLK2);
 
