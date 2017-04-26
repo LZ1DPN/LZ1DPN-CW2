@@ -66,12 +66,13 @@ int byteRead = 0;  // for serial comunication
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
   
-int_fast32_t rx=7000000/SI5351_FREQ_MULT; // Starting frequency of VFO
+int_fast32_t rx=7000000; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxif=6000000; // IF freq, will be summed with vfo freq - rx variable
+int_fast32_t rxif=5999700; // IF freq, will be summed with vfo freq - rx variable
+int_fast32_t rxbfo=5999000;  //BFO generator
 int_fast32_t rxRIT=0;
-int_fast32_t rx600hz=600;   // in cw trx not need
-
+int_fast32_t rx600hz=0;   // in cw trx not need cw offset
+long cal=1;
 int_fast32_t increment = 100; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
 String hertz = "100 Hz";
@@ -143,28 +144,35 @@ Wire.begin();
   sei();
   
 // new
- 
-  si5351.set_correction(140); //**mine. There is a calibration sketch in File/Examples/si5351Arduino-Jason
-  //where you can determine the correction by using the serial monitor.
 
   //initialize the Si5351
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0); //If you're using a 27Mhz crystal, put in 27000000 instead of 0
+  Serial.println("*Initialize Si5351\n");
+  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 25000000L, cal); 
+  
+  //If you're using a 27Mhz crystal, put in 27000000 instead of 0
   // 0 is the default crystal frequency of 25Mhz.
 
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
+  si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
+  Serial.println("*Fix PLL\n");
+  si5351.output_enable(SI5351_CLK0, 1);
+  si5351.output_enable(SI5351_CLK1, 1);
+  si5351.output_enable(SI5351_CLK2, 1);
+ 
+  Serial.println("*Enable PLL Output\n");
   // Set CLK0 to output the starting "vfo" frequency as set above by vfo = ?
   // Set CLK0 to output vfo + if = rx vfo frequency	
-  si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
-  volatile uint32_t vfoT = (rx * SI5351_FREQ_MULT) + rxif;
-
+  si5351.set_freq(1300000000L , SI5351_CLK1);
   // Set CLK1 to output tx vfo frequency
-  si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
-
+  si5351.set_freq((700000000L + rx600hz), SI5351_CLK0);
   // Set CLK2 to output bfo frequency
-  si5351.set_freq(rxif, 0, SI5351_CLK2);
-  si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA); //you can set this to 2MA, 4MA, 6MA or 8MA
-  si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_8MA); //be careful though - measure into 50ohms
-  si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_8MA); //
+  si5351.set_freq(600000000L , SI5351_CLK2);
+  Serial.println("*Si5350 ON\n");
+
+  // Set CLK levels
+  si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA); //you can set this to 2MA, 4MA, 6MA or 8MA
+  si5351.drive_strength(SI5351_CLK1,SI5351_DRIVE_4MA); //be careful though - measure into 50ohms
+  si5351.drive_strength(SI5351_CLK2,SI5351_DRIVE_4MA); //
 
 // new
   
@@ -308,7 +316,16 @@ if (Serial.available()) {
                 }
              }        
    }
-   
+   if(byteRead == 55){     // 1 - up freq
+    rxbfo = rxbfo + increment;
+    sendFrequency(rx);
+    Serial.println(rxbfo);
+   }
+  if(byteRead == 56){   // 2 - down freq
+    rxbfo = rxbfo - increment;
+    sendFrequency(rx);
+    Serial.println(rxbfo);
+  }
 }
 	
 }	  
@@ -331,15 +348,13 @@ ISR(PCINT2_vect) {
 
 // new
 void sendFrequency(double frequency) { 
-	rx=frequency; //new ???
-    //VFO
-	si5351.set_freq((rx * SI5351_FREQ_MULT) + rxif, SI5351_PLL_FIXED, SI5351_CLK0);
-	
+	rx=frequency;
+  //VFO
+	si5351.set_freq(((rx + rxif)*100LL), SI5351_CLK1);
 	//TXVFO Set CLK1 to output tx vfo frequency
-    si5351.set_freq((rx * SI5351_FREQ_MULT) + rx600hz, SI5351_PLL_FIXED, SI5351_CLK1);
-    
+  si5351.set_freq(((rx + rx600hz)*100LL), SI5351_CLK0);
 	//BFO Set CLK2 to output bfo frequency
-    si5351.set_freq(rxif, 0, SI5351_CLK2);
+  si5351.set_freq((rxbfo*100LL), SI5351_CLK2);
 
 	Serial.println(frequency);   // for serial console debuging
 }
@@ -379,7 +394,7 @@ void showFreq(){
 	display.println(hertz);
 	display.display();
 
-	timepassed = millis();
+//	timepassed = millis();
  }
  
 void checkBTNdecode(){
