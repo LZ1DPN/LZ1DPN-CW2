@@ -61,6 +61,7 @@ char inTx = 0;     // trx in transmit mode temp var
 char keyDown = 0;   // keyer down temp vat
 int var_i = 0;
 int byteRead = 0;  // for serial comunication
+//int_fast32_t rit=600; // RIT +600 Hz
 
 #define BTNDEC (A2)  // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
@@ -68,14 +69,14 @@ Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be inter
   
 int_fast32_t rx=7000000; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxif=5999950; // IF freq, will be summed with vfo freq - rx variable 6000000  5999600
-int_fast32_t rxbfo=5999950;  //BFO generator5999800 5999200
+int_fast32_t rxif=5999300; // IF freq, will be summed with vfo freq - rx variable 5999950  5999200
+int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
 int_fast32_t rx600hz=0;   // in cw trx not need cw offset
-long cal=1;
-int_fast32_t increment = 100; // starting VFO update increment in HZ. tuning step
+long cal=100;
+int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
-String hertz = "100 Hz";
+String hertz = "50 Hz";
 int  hertzPosition = 0;
 
 byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
@@ -94,28 +95,48 @@ nonzero cwTimeout denotes that we are in cw transmit mode.
 */
 
 void checkCW(){
+  pinMode(TX_RX, OUTPUT);
   if (keyDown == 0 && analogRead(ANALOG_KEYER) < 50){
     //switch to transmit mode if we are not already in it
     if (inTx == 0){
-        //put the  TX_RX line to transmit
-          digitalWrite(TX_RX, 1);
-        //give the relays a few ms to settle the T/R relays
-        delay(50);
+      //put the TX_RX line to transmit
+      digitalWrite(TX_RX, 1);
+      si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
+      si5351.output_enable(SI5351_CLK0, 1);
+      si5351.set_freq(((rx*100L) + (rx600hz*100LL)), SI5351_CLK0);
+      si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
+         //give the relays a few ms to settle the T/R relays
     }
     inTx = 1;
     keyDown = 1;
+//    rxif = rit;  // in tx freq +600Hz 
+//    sendFrequency(rx);
     digitalWrite(CW_KEY, 1); //start the side-tone
   }
 
   //reset the timer as long as the key is down
   if (keyDown == 1){
+    si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
+    si5351.output_enable(SI5351_CLK0, 1);
+    si5351.set_freq(((rx*100L) + (rx600hz*100LL)), SI5351_CLK0);
+    si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
+      
+      
+      
      cwTimeout = CW_TIMEOUT + millis();
   }
 
   //if we have a keyup
   if (keyDown == 1 && analogRead(ANALOG_KEYER) > 150){
     keyDown = 0;
+  inTx = 0;    /// NEW
+//  rxif = 6000000;  /// NEW
+//  sendFrequency(rx);  /// NEW
     digitalWrite(CW_KEY, 0);  // stop the side-tone
+    digitalWrite(TX_RX, 0);
+      si5351.output_enable(SI5351_CLK0, 0);
+      si5351.set_freq((1000000L), SI5351_CLK0);
+      si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA);
     cwTimeout = millis() + CW_TIMEOUT;
   }
 
@@ -124,7 +145,12 @@ void checkCW(){
     //move the radio back to receive
     digitalWrite(TX_RX, 0);
     digitalWrite(CW_KEY, 0);
+    si5351.output_enable(SI5351_CLK0, 0);
+    si5351.set_freq((1000000L), SI5351_CLK0);
+    si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA);
     inTx = 0;
+ //   rxif = 6000000;
+//    sendFrequency(rx);
     cwTimeout = 0;
   }
 }
@@ -164,7 +190,8 @@ Wire.begin();
   // Set CLK0 to output vfo + if = rx vfo frequency	
   si5351.set_freq(1300000000L , SI5351_CLK1);
   // Set CLK1 to output tx vfo frequency
-//  si5351.set_freq((700000000L + rx600hz), SI5351_CLK0);
+  si5351.set_freq((1000000L), SI5351_CLK0);
+  si5351.output_enable(SI5351_CLK0, 0);
   // Set CLK2 to output bfo frequency
   si5351.set_freq(600000000L , SI5351_CLK2);
   Serial.println("*Si5350 ON\n");
@@ -178,7 +205,7 @@ Wire.begin();
 //set up the pins in/out and logic levels
 pinMode(TX_RX, OUTPUT);
 digitalWrite(TX_RX, LOW);  
-digitalWrite(TX_RX, HIGH); 
+//digitalWrite(TX_RX, HIGH); 
 
 pinMode(BAND_HI, OUTPUT);  
 digitalWrite(BAND_HI, LOW);
@@ -193,7 +220,7 @@ pinMode(TX_ON, INPUT);    // need pullup resistor see Minima schematic
 digitalWrite(TX_ON, LOW);
   
 pinMode(CW_KEY, OUTPUT);
-digitalWrite(CW_KEY, HIGH);
+// digitalWrite(CW_KEY, HIGH);
 digitalWrite(CW_KEY, LOW);
 
 // Initialize the Serial port so that we can use it for debugging
@@ -356,7 +383,8 @@ void sendFrequency(double frequency) {
   //VFO
 	si5351.set_freq(((rx + rxif)*100LL), SI5351_CLK1);
 	//TXVFO Set CLK1 to output tx vfo frequency
-//  si5351.set_freq(((rx + rx600hz)*100LL), SI5351_CLK0);
+//  si5351.set_freq((1000000L), SI5351_CLK0);
+  
 	//BFO Set CLK2 to output bfo frequency
   si5351.set_freq((rxbfo*100LL), SI5351_CLK2);
 
