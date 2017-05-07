@@ -69,7 +69,7 @@ Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be inter
   
 int_fast32_t rx=7000000; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxif=5999300; // IF freq, will be summed with vfo freq - rx variable 5999950  5999200
+int_fast32_t rxif=5999100; // IF freq, will be summed with vfo freq - rx variable 5999950  5999200 5999300
 int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
 int_fast32_t rx600hz=0;   // in cw trx not need cw offset
@@ -101,6 +101,7 @@ void checkCW(){
     if (inTx == 0){
       //put the TX_RX line to transmit
       digitalWrite(TX_RX, 1);
+  	  delay(50);
       si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
       si5351.output_enable(SI5351_CLK0, 1);
       si5351.set_freq(((rx*100L) + (rx600hz*100LL)), SI5351_CLK0);
@@ -143,8 +144,8 @@ void checkCW(){
   //if we have keyuup for a longish time while in cw rx mode
   if (inTx == 1 && cwTimeout < millis()){
     //move the radio back to receive
+	  digitalWrite(CW_KEY, 0);
     digitalWrite(TX_RX, 0);
-    digitalWrite(CW_KEY, 0);
     si5351.output_enable(SI5351_CLK0, 0);
     si5351.set_freq((1000000L), SI5351_CLK0);
     si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_2MA);
