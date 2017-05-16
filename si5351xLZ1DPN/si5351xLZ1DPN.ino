@@ -72,7 +72,7 @@ int_fast32_t rx2=1; // temp variable to hold the updated frequency
 int_fast32_t rxif=5998800; // IF freq, will be summed with vfo freq - rx variable 5999950  5999100
 int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
-int_fast32_t rx600hz=600;   // cw offset
+int_fast32_t rx600hz=700;   // cw offset
 long cal=130;
 int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
@@ -104,7 +104,7 @@ void checkCW(){
 //  	  delay(50);
       si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
       si5351.output_enable(SI5351_CLK0, 1);
-      si5351.set_freq(((rx*100L) + (rx600hz*100LL)), SI5351_CLK0);
+      si5351.set_freq(((rx*100L) - (rx600hz*100LL)), SI5351_CLK0);
       si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
          //give the relays a few ms to settle the T/R relays
     }
@@ -119,7 +119,7 @@ void checkCW(){
   if (keyDown == 1){
     si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
     si5351.output_enable(SI5351_CLK0, 1);
-    si5351.set_freq(((rx*100L) + (rx600hz*100LL)), SI5351_CLK0);
+    si5351.set_freq(((rx*100L) - (rx600hz*100LL)), SI5351_CLK0);
     si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_8MA);
     cwTimeout = CW_TIMEOUT + millis();
   }
@@ -240,7 +240,7 @@ digitalWrite(CW_KEY, LOW);
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,0);
-  display.println(rx);
+  display.println(rx-750);
   display.display();
   
   pinMode(BTNDEC,INPUT);		// band change button
