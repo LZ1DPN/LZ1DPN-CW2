@@ -67,12 +67,12 @@ int byteRead = 0;  // for serial comunication
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
   
-int_fast32_t rx=7000000; // Starting frequency of VFO freq
+int_fast32_t rx=7000750; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
 int_fast32_t rxif=5998800; // IF freq, will be summed with vfo freq - rx variable 5999950  5999100
 int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
-int_fast32_t rx600hz=0;   // in cw trx not need cw offset
+int_fast32_t rx600hz=600;   // cw offset
 long cal=130;
 int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
@@ -250,7 +250,7 @@ digitalWrite(CW_KEY, LOW);
 
   display.clearDisplay();	
   display.setCursor(0,0);
-  display.println(rx);
+  display.println(rx-750);
   display.setCursor(0,18);
   display.println(hertz);
   display.display();
@@ -293,12 +293,12 @@ if (Serial.available()) {
 	if(byteRead == 49){     // 1 - up freq
 		rx = rx + increment;
 		sendFrequency(rx);
-    Serial.println(rx);
+    Serial.println(rx-750);
 		}
 	if(byteRead == 50){		// 2 - down freq
 		rx = rx - increment;
 		sendFrequency(rx);
-    Serial.println(rx);
+    Serial.println(rx-750);
 		}
 	if(byteRead == 51){		// 3 - up increment
 		setincrement();
@@ -306,7 +306,7 @@ if (Serial.available()) {
 		}
 	if(byteRead == 52){		// 4 - print VFO state in serial console
 		Serial.println("VFO_VERSION 10.0");
-		Serial.println(rx);
+		Serial.println(rx-750);
 		Serial.println(rxif);
 		Serial.println(rxbfo);
 		Serial.println(increment);
@@ -318,7 +318,7 @@ if (Serial.available()) {
                 var_i++;
                 rx = rx + 10;
                 sendFrequency(rx);
-                Serial.println(rx);
+                Serial.println(rx-750);
                 showFreq();
                 if (Serial.available()) {
 					if(byteRead == 53){
@@ -334,7 +334,7 @@ if (Serial.available()) {
                 var_i++;
                 rx = rx - 10;
                 sendFrequency(rx);
-                Serial.println(rx);
+                Serial.println(rx-750);
                 showFreq();
                 if (Serial.available()) {
                     if(byteRead == 54){
@@ -419,12 +419,12 @@ void showFreq(){
 
 	display.clearDisplay();	
 	display.setCursor(0,0);
-	display.println(rx);
+	display.println(rx-750);
 	display.setCursor(0,18);
 	display.println(hertz);
 	display.display();
 
-//	timepassed = millis();
+//	timepassed = millis(50);
  }
 
 
