@@ -18,7 +18,6 @@ Revision 9.0 - 	March 06, 2017  - Si5351 + Arduino + OLED - for Minima and Bingo
 				si5351_vcxo.ino - Example for using the Si5351B VCXO functions
 				with Si5351Arduino library Copyright (C) 2016 Jason Milldrum <milldrum@gmail.com>
 Revision 10.0 - March 08, 2017  - Si5351 + Arduino + OLED - for LZ1DPN CW Transceiver (LZ1DPN mod).
-Revision 11.0 - May 18, 2017  - add +/- RIT
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -47,6 +46,7 @@ char inTx = 0;     // trx in transmit mode temp var
 char keyDown = 0;   // keyer down temp vat
 int var_i = 0;
 int byteRead = 0;  // for serial comunication
+//int_fast32_t rit=600; // RIT +600 Hz
 #define BTNDEC (A2)  // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
@@ -56,13 +56,15 @@ int_fast32_t rx2=1; // temp variable to hold the updated frequency
 int_fast32_t rxif=5998800; // IF freq, will be summed with vfo freq - rx variable 5999950  5999100
 int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
-int RITon=0;
 int_fast32_t rx600hz=700;   // cw offset
 long cal=130;
 int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
 String hertz = "50 Hz";
 int  hertzPosition = 0;
+
+byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
+String freq; // string to hold the frequency
 int_fast32_t timepassed = millis(); // int to hold the arduino miilis since startup
 
 // buttons temp var
@@ -142,6 +144,7 @@ Wire.begin();
   sei();
   
 // new
+
   //initialize the Si5351
   Serial.println("*Initialize Si5351\n");
   si5351.init(SI5351_CRYSTAL_LOAD_8PF, 25000000L, cal); 
@@ -159,7 +162,7 @@ Wire.begin();
   Serial.println("*Enable PLL Output\n");
   // Set CLK1 to output the starting "vfo" frequency as set above by vfo = ?
   // Set CLK1 to output vfo + if +/- offset = rx vfo frequency	
-  si5351.set_freq(1299955000L , SI5351_CLK1);
+  si5351.set_freq(1300000000L , SI5351_CLK1);
   // Set CLK0 to output txo vfo frequency
   si5351.set_freq((1000000L), SI5351_CLK0);
   si5351.output_enable(SI5351_CLK0, 0);
@@ -179,12 +182,6 @@ digitalWrite(TX_RX, LOW);
 
 pinMode(CW_KEY, OUTPUT);
 digitalWrite(CW_KEY, LOW);
-
-pinMode(BTNDEC,INPUT);		// band change button
-digitalWrite(BTNDEC,HIGH);    // level
-
-pinMode(A0,INPUT); // Connect to a button that goes to GND on push - rotary encoder push button - for FREQ STEP change
-digitalWrite(A0,HIGH);  //level
 
 // Initialize the Serial port so that we can use it for debugging
   Serial.begin(115200);
@@ -207,23 +204,26 @@ digitalWrite(A0,HIGH);  //level
   display.setCursor(0,0);
   display.println(rx-750);
   display.display();
+  
+  pinMode(BTNDEC,INPUT);		// band change button
+  digitalWrite(BTNDEC,HIGH);    // level
+  pinMode(A0,INPUT); // Connect to a button that goes to GND on push - rotary encoder push button - for FREQ STEP change
+  digitalWrite(A0,HIGH);  //level
 
-	display.clearDisplay();	
-	display.setCursor(0,0);
-	display.print("F:");display.println(rx-750);
-	display.setCursor(0,18);
-	display.print("St:");display.print(hertz);
-	display.setCursor(50,18);
-	display.print("RIT:");display.print(rxRIT);
-	display.display();
+  display.clearDisplay();	
+  display.setCursor(0,0);
+  display.println(rx-750);
+  display.setCursor(0,18);
+  display.println(hertz);
+  display.display();
   
 }
 
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-	checkCW();   		// when pres keyer
-	checkBTNdecode(); 	// BAND change
+	checkCW();   // when pres keyer
+	checkBTNdecode();  // BAND change
 	
 // freq change 
   if (rx != rx2){
@@ -232,7 +232,7 @@ void loop() {
         rx2 = rx;
       }
 
-//  step freq change + RIT ON/OFF  
+//  step freq change     
   buttonstate = digitalRead(A0);
   if(buttonstate == LOW) {
         setincrement();        
@@ -318,23 +318,17 @@ if (Serial.available()) {
 
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
-  if (result) {  
-	if (RITon=0){
-		if (result == DIR_CW){rx=rx+increment;}
-		else {rx=rx-increment;};
-	}
-	if (RITon=1){
-		if (result == DIR_CW){rxRIT=rxRIT+50;}
-		else {rxRIT=rxRIT-50;};
-	}	
+  if (result) {    
+    if (result == DIR_CW){rx=rx+increment;}
+    else {rx=rx-increment;};       
   }
 }
 
 // new
 void sendFrequency(double frequency) { 
 	rx=frequency;
-    //VFO CLK1
-	si5351.set_freq(((rx + rxif + rxRIT)*100LL), SI5351_CLK1);
+    //VFO
+	si5351.set_freq(((rx + rxif)*100LL), SI5351_CLK1);
 	//BFO Set CLK2 to output bfo frequency
     si5351.set_freq((rxbfo*100LL), SI5351_CLK2);
 	Serial.println(frequency);   // for serial console debuging
@@ -343,33 +337,38 @@ void sendFrequency(double frequency) {
 
 // step increments for rotary encoder button
 void setincrement(){
-  if(increment == 0){increment = 1; hertz = "1 Hz"; hertzPosition=0;RITon=0;} 
-  else if(increment == 1){increment = 10; hertz = "10 Hz"; hertzPosition=0;RITon=0;}
-  else if(increment == 10){increment = 50; hertz = "50 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 50){increment = 100;  hertz = "100 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 100){increment = 500; hertz="500 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 500){increment = 1000; hertz="1 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 1000){increment = 2500; hertz="2.5 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 2500){increment = 5000; hertz="5 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 5000){increment = 10000; hertz="10 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 10000){increment = 100000; hertz="100 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 100000){increment = 1000000; hertz="1 Mhz"; hertzPosition=0;RITon=0;} 
-  else{increment = 0; hertz = "ritON"; hertzPosition=0; RITon=1;};  
+  if(increment == 1){increment = 10; hertz = "10 Hz"; hertzPosition=0;} 
+  else if(increment == 10){increment = 50; hertz = "50 Hz"; hertzPosition=0;}
+  else if (increment == 50){increment = 100;  hertz = "100 Hz"; hertzPosition=0;}
+  else if (increment == 100){increment = 500; hertz="500 Hz"; hertzPosition=0;}
+  else if (increment == 500){increment = 1000; hertz="1 Khz"; hertzPosition=0;}
+  else if (increment == 1000){increment = 2500; hertz="2.5 Khz"; hertzPosition=0;}
+  else if (increment == 2500){increment = 5000; hertz="5 Khz"; hertzPosition=0;}
+  else if (increment == 5000){increment = 10000; hertz="10 Khz"; hertzPosition=0;}
+  else if (increment == 10000){increment = 100000; hertz="100 Khz"; hertzPosition=0;}
+  else if (increment == 100000){increment = 1000000; hertz="1 Mhz"; hertzPosition=0;} 
+  else{increment = 1; hertz = "1 Hz"; hertzPosition=0;};  
   showFreq();
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
 }
 
 // oled display functions
 void showFreq(){
+    millions = int(rx/1000000);
+    hundredthousands = ((rx/100000)%10);
+    tenthousands = ((rx/10000)%10);
+    thousands = ((rx/1000)%10);
+    hundreds = ((rx/100)%10);
+    tens = ((rx/10)%10);
+    ones = ((rx/1)%10);
+
 	display.clearDisplay();	
 	display.setCursor(0,0);
-	display.print("F:");display.println(rx-750);
+	display.println(rx-750);
 	display.setCursor(0,18);
-	display.print("St:");display.print(hertz);
-	display.setCursor(50,18);
-	display.print("RIT:");display.print(rxRIT);
+	display.println(hertz);
 	display.display();
-}
+ }
 
 
 //  BAND CHANGE !!! band plan - change if need 

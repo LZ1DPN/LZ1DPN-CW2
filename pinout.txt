@@ -1,9 +1,6 @@
 D4 - CW mainboard - output
 D5 - oled reset
-D7 - TN_ON - PTT out
 D12 - tx/rx relay mainboard - output
-D6 - LPF relay mainboard - output
-D7 - PTT - input
 A0 - rotary encoder push button - for FREQ STEP change - input
 A1 - cw key - input
 A2 - band change - input
