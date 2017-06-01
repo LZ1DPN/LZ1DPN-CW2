@@ -202,19 +202,22 @@ digitalWrite(A0,HIGH);  //level
   display.clearDisplay();
   
   // text display tests
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println(rx-750);
-  display.display();
+//  display.setTextSize(2);
+//  display.setTextColor(WHITE);
+//  display.setCursor(0,0);
+//  display.println(rx-750);
+//  display.display();
 
 	display.clearDisplay();	
+	display.setTextSize(2);
+	display.setTextColor(WHITE);
 	display.setCursor(0,0);
 	display.print("F:");display.println(rx-750);
-	display.setCursor(0,18);
+	display.setTextSize(1);
+	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
-	display.setCursor(50,18);
-	display.print("RIT:");display.print(rxRIT);
+	display.setCursor(64,16);
+	display.print("rit:");display.print(rxRIT);
 	display.display();
   
 }
@@ -319,13 +322,14 @@ if (Serial.available()) {
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
   if (result) {  
-	if (RITon=0){
+	if (RITon==0){
 		if (result == DIR_CW){rx=rx+increment;}
 		else {rx=rx-increment;};
 	}
-	if (RITon=1){
+	if (RITon==1){
 		if (result == DIR_CW){rxRIT=rxRIT+50;}
 		else {rxRIT=rxRIT-50;};
+		showFreq();
 	}	
   }
 }
@@ -343,17 +347,17 @@ void sendFrequency(double frequency) {
 
 // step increments for rotary encoder button
 void setincrement(){
-  if(increment == 0){increment = 1; hertz = "1 Hz"; hertzPosition=0;RITon=0;} 
-  else if(increment == 1){increment = 10; hertz = "10 Hz"; hertzPosition=0;RITon=0;}
-  else if(increment == 10){increment = 50; hertz = "50 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 50){increment = 100;  hertz = "100 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 100){increment = 500; hertz="500 Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 500){increment = 1000; hertz="1 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 1000){increment = 2500; hertz="2.5 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 2500){increment = 5000; hertz="5 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 5000){increment = 10000; hertz="10 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 10000){increment = 100000; hertz="100 Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 100000){increment = 1000000; hertz="1 Mhz"; hertzPosition=0;RITon=0;} 
+  if(increment == 0){increment = 1; hertz = "1Hz"; hertzPosition=0;RITon=0;} 
+  else if(increment == 1){increment = 10; hertz = "10Hz"; hertzPosition=0;RITon=0;}
+  else if(increment == 10){increment = 50; hertz = "50Hz"; hertzPosition=0;RITon=0;}
+  else if (increment == 50){increment = 100;  hertz = "100Hz"; hertzPosition=0;RITon=0;}
+  else if (increment == 100){increment = 500; hertz="500Hz"; hertzPosition=0;RITon=0;}
+  else if (increment == 500){increment = 1000; hertz="1Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 1000){increment = 2500; hertz="2.5Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 2500){increment = 5000; hertz="5Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 5000){increment = 10000; hertz="10Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 10000){increment = 100000; hertz="100Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 100000){increment = 1000000; hertz="1Mhz"; hertzPosition=0;RITon=0;} 
   else{increment = 0; hertz = "ritON"; hertzPosition=0; RITon=1;};  
   showFreq();
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
@@ -362,12 +366,15 @@ void setincrement(){
 // oled display functions
 void showFreq(){
 	display.clearDisplay();	
+	display.setTextSize(2);
+	display.setTextColor(WHITE);
 	display.setCursor(0,0);
 	display.print("F:");display.println(rx-750);
-	display.setCursor(0,18);
+	display.setTextSize(1);
+	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
-	display.setCursor(50,18);
-	display.print("RIT:");display.print(rxRIT);
+	display.setCursor(64,16);
+	display.print("rit:");display.print(rxRIT);
 	display.display();
 }
 
