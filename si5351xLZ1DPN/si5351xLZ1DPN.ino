@@ -53,7 +53,7 @@ Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be inter
   
 int_fast32_t rx=7000750; // Starting frequency of VFO freq
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxif=5998800; // IF freq, will be summed with vfo freq - rx variable 5999950  5999100
+int_fast32_t rxif=5998500; // IF freq, will be summed with vfo freq - rx variable 5999950  5999100
 int_fast32_t rxbfo=6000000;  //BFO generator 5999950 6000000
 int_fast32_t rxRIT=0;
 int RITon=0;
@@ -212,7 +212,7 @@ digitalWrite(A0,HIGH);  //level
 	display.setTextSize(2);
 	display.setTextColor(WHITE);
 	display.setCursor(0,0);
-	display.print("F:");display.println(rx-750);
+	display.println(rx-750);
 	display.setTextSize(1);
 	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
@@ -229,10 +229,10 @@ void loop() {
 	checkBTNdecode(); 	// BAND change
 	
 // freq change 
-  if (rx != rx2){
-		showFreq();
-        sendFrequency(rx);
-        rx2 = rx;
+  if ((rx != rx2) || (RITon == 1)){
+		  showFreq();
+      sendFrequency(rx);
+      rx2 = rx;
       }
 
 //  step freq change + RIT ON/OFF  
@@ -321,17 +321,20 @@ if (Serial.available()) {
 
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
-  if (result) {  
+if (result) {  
 	if (RITon==0){
 		if (result == DIR_CW){rx=rx+increment;}
-		else {rx=rx-increment;};
+		else {rx=rx-increment;}
 	}
 	if (RITon==1){
-		if (result == DIR_CW){rxRIT=rxRIT+50;}
-		else {rxRIT=rxRIT-50;};
-		showFreq();
-	}	
-  }
+		if (result == DIR_CW){
+		  rxRIT=rxRIT+50;
+		  }
+		else {
+		  rxRIT=rxRIT-50;
+	 	  }
+  } 
+}
 }
 
 // new
@@ -369,7 +372,8 @@ void showFreq(){
 	display.setTextSize(2);
 	display.setTextColor(WHITE);
 	display.setCursor(0,0);
-	display.print("F:");display.println(rx-750);
+	//display.print("F:");
+	display.println(rx-750);
 	display.setTextSize(1);
 	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
@@ -402,37 +406,37 @@ if(BTNdecodeON != BTNlaststate){
     
     switch (BTNinc) {
           case 1:
-            rx=1810000;
+            rx=1810750;
             break;
           case 2:
-            rx=3500000;
+            rx=3500750;
             break;
           case 3:
-            rx=5250000;
+            rx=5250750;
             break;
           case 4:
-            rx=7000000;
+            rx=7000750;
             break;
           case 5:
-            rx=10100000;
+            rx=10100750;
             break;
           case 6:
-            rx=14000000;
+            rx=14000750;
             break;
           case 7:
-            rx=18068000;
+            rx=18068750;
             break;    
           case 8:
-            rx=21000000;
+            rx=21000750;
             break;    
           case 9:
-            rx=24890000;
+            rx=24890750;
             break;    
           case 10:
-            rx=28000000;
+            rx=28000750;
             break;
           case 11:
-            rx=29100000;
+            rx=29100750;
             break;    	  
           default:             
             break;
