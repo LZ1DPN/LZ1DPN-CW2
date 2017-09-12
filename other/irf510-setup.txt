@@ -1,0 +1,25 @@
+If you are speaking of RV1:
+
+Turn the measured bias on the gate of the IRF510 to below 1v.
+Connect the drain of the IRF510.
+Measure the current draw of the rig in RX. It should be receiving ok.
+Increase RV1 SLOWLY until there is about 100 ma. MORE current draw
+at the drain of the IRF510. Measure the gate voltage. It should be around 3v.
+Connect the drain of the IRF510 and speak into the mic. The increase
+in current to the drain should be to around 1A (with12v on the drain).
+If not, adjust R136 up until the current drain is about correct.
+
+Voila. You are done.
+
+There are finer adjustments including the BFO frequency, the mic drive, etc,
+but this is the basic TX adjustment. Once it is made, more or less LEAVE IT ALONE.
+Doing more stands one in good stead to blow up the IRF510.
+
+Watch for oscillation in the final. This is almost always a too low impedance mismatch
+at the drain. The usual fix is a 10 ohm resistor between the gate and the rest of the circuit.
+which lowers the Q somewhat and dampens the oscillation. It has little effect on output
+power (and is probably a very good mandatory mod actually; it's not mandatory because
+not every IRF510 will oscillate).
+
+john
+AD5YE
